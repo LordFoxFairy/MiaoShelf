@@ -1,0 +1,6 @@
+name = "miaokit-ldxp-proxy"
+main = "index.js"
+compatibility_date = "2026-08-01"
+
+# PROXY_TOKEN 用 secret 设置，不写在这里：
+#   npx wrangler secret put PROXY_TOKEN
