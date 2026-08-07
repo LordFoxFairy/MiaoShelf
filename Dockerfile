@@ -52,7 +52,11 @@ RUN pnpm exec esbuild src/worker/index.ts \
         --bundle --platform=node --target=node22 --format=cjs \
         --outfile=/worker-dist/create-admin.cjs \
         --external:@prisma/client --external:.prisma --alias:@=./src \
-    && echo "worker 与建管理员脚本已编译"
+    && pnpm exec esbuild scripts/check-source.ts \
+        --bundle --platform=node --target=node22 --format=cjs \
+        --outfile=/worker-dist/check-source.cjs \
+        --external:@prisma/client --external:.prisma --alias:@=./src \
+    && echo "worker、建管理员、诊断脚本已编译"
 
 # 运行时的最小依赖：只有 Prisma Client 和它的查询引擎。
 # 用 npm 装（扁平结构，好拷贝），再在这个目录里 generate 一次。
@@ -96,6 +100,7 @@ COPY --from=builder --chown=nextjs:nodejs \
 # 编译好的同步进程 + 它需要的 Prisma 运行时
 COPY --from=builder --chown=nextjs:nodejs /worker-dist/worker.cjs ./worker.cjs
 COPY --from=builder --chown=nextjs:nodejs /worker-dist/create-admin.cjs ./create-admin.cjs
+COPY --from=builder --chown=nextjs:nodejs /worker-dist/check-source.cjs ./check-source.cjs
 COPY --from=builder --chown=nextjs:nodejs /worker-deps/node_modules /worker-modules
 
 # 数据目录（SQLite 文件、浏览器 Profile），部署时挂 volume

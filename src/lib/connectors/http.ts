@@ -109,11 +109,20 @@ export async function requestJson(
     });
   }
 
-  // 拿到 200 但内容是 HTML —— 典型的验证码/登录跳转页伪装成成功响应。
+  // 拿到 200 但内容是 HTML —— 典型的验证码/WAF 挑战页伪装成成功响应。
   if (looksLikeHtml(text)) {
+    // WAF 挑战页有明显特征，单独识别出来给出可操作的提示，
+    // 否则用户只会看到"需要验证"却不知道该怎么办。
+    const isWafChallenge = /_waf_|waf_is_mobile|challenge|安全检查/i.test(
+      text.slice(0, 2000),
+    );
+
     throw new ConnectorError(
       "FORBIDDEN",
-      "响应为 HTML 页面，可能需要人工验证或重新登录",
+      isWafChallenge
+        ? "货源平台的访问保护拦截了本次请求（返回了 JS 挑战页）。" +
+          "通常是服务器 IP 被标记所致，可配置 SOURCE_HTTP_PROXY 换一个出口 IP。"
+        : "响应为 HTML 页面，可能需要人工验证或重新登录",
       { statusCode: response.status, detail: safeErrorDetail(text, 200) },
     );
   }

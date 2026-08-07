@@ -5,6 +5,7 @@ import { createMockConnector } from "@/lib/connectors/mock/connector";
 import { loadCredentials } from "@/lib/source-credentials";
 import type { ProviderId, SourceConnector } from "@/lib/connectors/types";
 import { prisma } from "@/lib/db";
+import { getSourceFetch } from "@/lib/connectors/proxy-fetch";
 
 /**
  * 连接器注册。
@@ -37,5 +38,7 @@ export async function connectorForAccount(
     // 加抖动，避免定时任务把外部接口打出尖峰（spec §12.4）。
     jitterMs: 300,
     timeoutMs: 15_000,
+    // 配了 SOURCE_HTTP_PROXY 就走代理出口，没配就是普通 fetch。
+    fetchImpl: getSourceFetch(),
   });
 }
