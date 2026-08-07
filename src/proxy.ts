@@ -21,6 +21,12 @@ const NO_STORE_PREFIXES = [
   "/login",
 ];
 
+/** 前台可缓存页面。 */
+function isPublicPage(pathname: string): boolean {
+  if (pathname === "/") return true;
+  return /^\/(products|category|search)(\/|$)/.test(pathname);
+}
+
 function isNoStore(pathname: string): boolean {
   if (NO_STORE_PREFIXES.some((p) => pathname.startsWith(p))) return true;
   // 状态与点击确认接口必须实时（spec §13.6）
@@ -68,9 +74,23 @@ export async function proxy(request: NextRequest) {
   }
 
   const response = NextResponse.next();
+
   if (isNoStore(pathname)) {
     response.headers.set("Cache-Control", "no-store, must-revalidate");
+  } else if (isPublicPage(pathname)) {
+    /*
+     * 前台页面按需渲染（构建时没有数据库可读），缓存交给 CDN 做。
+     * s-maxage 让 Cloudflare 缓存，stale-while-revalidate 让它在后台
+     * 更新的同时先返回旧页面，用户不用等。
+     *
+     * 库存状态不吃这个缓存 —— 它由页面里的 LiveStatus 组件单独拉取。
+     */
+    response.headers.set(
+      "Cache-Control",
+      "public, s-maxage=60, stale-while-revalidate=300",
+    );
   }
+
   return response;
 }
 

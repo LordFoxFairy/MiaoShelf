@@ -1,0 +1,69 @@
+# MiaoKit Catalog —— 生产部署
+#
+#   docker compose up -d
+#
+# 网站和同步进程用同一个镜像，靠启动命令区分。
+# 数据（SQLite + 浏览器 Profile）挂在 volume 里，重建容器不会丢。
+#
+# 端口只绑 127.0.0.1，公网访问由前面的反向代理（Nginx / 1Panel / OpenResty）转发。
+
+services:
+  web:
+    image: ghcr.io/lordfoxfairy/miaoshelf:latest
+    container_name: catalog-web
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # 容器内固定路径，别改
+      DATABASE_URL: "file:/app/data/prod.db"
+      PLAYWRIGHT_PROFILE_ROOT: /app/data/browser-profiles
+    ports:
+      # 换端口只改左边。3210 是为了避开常见占用。
+      - "127.0.0.1:${WEB_PORT:-3210}:3000"
+    volumes:
+      - catalog_data:/app/data
+    # 和别的服务共处一台机器时，限制资源避免互相挤死
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 192M
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  worker:
+    image: ghcr.io/lordfoxfairy/miaoshelf:latest
+    container_name: catalog-worker
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: "file:/app/data/prod.db"
+      PLAYWRIGHT_PROFILE_ROOT: /app/data/browser-profiles
+    # 预编译好的同步进程，运行时不需要 TypeScript 工具链
+    command: ["node", "worker.cjs"]
+    volumes:
+      # 和 web 共用同一份数据 —— SQLite 文件必须是同一个
+      - catalog_data:/app/data
+    depends_on:
+      web:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 320M
+        reservations:
+          memory: 128M
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  catalog_data:

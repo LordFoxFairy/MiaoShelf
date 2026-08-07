@@ -21,6 +21,11 @@ playwright-report/
 test-results/
 .playwright/
 
+# 本地私密笔记 —— 服务器地址、凭据等，绝不能提交
+*.local.md
+SERVER.local.md
+.secrets/
+
 # SQLite 数据库 —— 含管理员密码哈希与加密后的货源凭据，绝不能提交
 *.db
 *.db-journal

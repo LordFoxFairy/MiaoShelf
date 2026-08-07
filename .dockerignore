@@ -1,0 +1,31 @@
+node_modules
+.next
+.git
+.github
+
+# 私密文件绝不能进镜像
+.env
+.env.*
+!.env.example
+*.local.md
+.secrets/
+
+# 数据库和会话
+*.db
+*.db-journal
+data/
+browser-profiles/
+
+# 开发产物
+dist
+coverage
+playwright-report
+test-results
+*.log
+.DS_Store
+.idea
+.vscode
+
+# 文档不影响运行
+README.md
+deploy/

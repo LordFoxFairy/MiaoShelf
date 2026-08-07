@@ -9,12 +9,16 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**
- * 商品详情。
+ * 商品详情。页面主体可被 CDN 短缓存，库存状态由 LiveStatus 单独实时拉取——
+ * 否则整页缓存会让库存显示成几分钟前的（spec §13.6）。
  *
- * 页面主体可以缓存，但库存状态由 LiveStatus 客户端组件单独拉取——
- * 否则整页被 CDN 缓存 5 分钟，库存就会显示成 5 分钟前的（spec §13.6）。
+ * 以下
+ * 按需渲染而不是构建时预渲染 —— 这些页面要读数据库，
+ * 构建环境（比如 Docker 镜像构建）里没有数据库。
+ * 缓存改由 CDN 按响应头处理（见下方 Cache-Control）。
  */
-export const revalidate = 120;
+export const dynamic = "force-dynamic";
+export const fetchCache = "default-no-store";
 
 export async function generateMetadata({
   params,

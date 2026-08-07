@@ -6,7 +6,13 @@ import { ProductFilters } from "@/components/site/product-filters";
 import { EmptyState } from "@/components/admin/empty-state";
 
 export const metadata = { title: "全部商品" };
-export const revalidate = 60;
+/**
+ * 按需渲染而不是构建时预渲染 —— 这些页面要读数据库，
+ * 构建环境（比如 Docker 镜像构建）里没有数据库。
+ * 缓存改由 CDN 按响应头处理（见下方 Cache-Control）。
+ */
+export const dynamic = "force-dynamic";
+export const fetchCache = "default-no-store";
 
 export default async function SearchPage({
   searchParams,

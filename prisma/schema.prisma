@@ -5,6 +5,8 @@
 
 generator client {
   provider = "prisma-client-js"
+  // native = 本机开发；debian 两项供 Docker 镜像使用（x64 与 arm64 都覆盖）
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
 }
 
 datasource db {

@@ -5,8 +5,13 @@ import { listPublicCategories, listPublicProducts } from "@/lib/queries/public";
 import { ProductCard } from "@/components/site/product-card";
 import { EmptyState } from "@/components/admin/empty-state";
 
-/** 首页可以被缓存 60 秒（spec §13.6）；库存状态另行实时加载。 */
-export const revalidate = 60;
+/**
+ * 按需渲染而不是构建时预渲染 —— 这些页面要读数据库，
+ * 构建环境（比如 Docker 镜像构建）里没有数据库。
+ * 缓存改由 CDN 按响应头处理（见下方 Cache-Control）。
+ */
+export const dynamic = "force-dynamic";
+export const fetchCache = "default-no-store";
 
 export default async function HomePage() {
   const [featured, latest, categories] = await Promise.all([
