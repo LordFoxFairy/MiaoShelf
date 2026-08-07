@@ -1,0 +1,310 @@
+// MiaoKit Catalog 数据模型（spec §6、§8）
+//
+// 核心设计：货源数据（SourceProduct）与展示数据（Product）分表。
+// 同步只写 SourceProduct，永远不碰管理员编辑过的展示字段。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------- 枚举
+
+// ---------------------------------------------------------------- 管理员
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  isActive     Boolean  @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  auditLogs AuditLog[]
+
+  @@map("admin_users")
+}
+
+/// 管理操作审计（spec §20）。
+model AuditLog {
+  id          String   @id @default(cuid())
+  adminUserId String?
+  action      String
+  targetType  String?
+  targetId    String?
+  /// 已脱敏的上下文，绝不含 Cookie/Token/密码。
+  metadata    String?
+  ipHash      String?
+  createdAt   DateTime @default(now())
+
+  adminUser AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([targetType, targetId])
+  @@map("audit_logs")
+}
+
+// ---------------------------------------------------------------- 货源账号
+
+model SourceAccount {
+  id       String         @id @default(cuid())
+  name     String
+  provider String @default("LDXP_MERCHANT")
+  baseUrl  String
+
+  /// 以下四个字段一律 AES-256-GCM 加密后存储（spec §10.1、§22）。
+  /// 明文只在 Worker 内存中短暂存在，不进日志、不返回浏览器。
+  encryptedUsername      String?
+  encryptedPassword      String?
+  encryptedCookie        String?
+  encryptedMerchantToken String?
+
+  sessionStatus      String @default("DISCONNECTED")
+  browserProfilePath String?
+  lastAuthAt         DateTime?
+  lastVerifiedAt     DateTime?
+  lastError          String?
+  isEnabled          Boolean       @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sourceProducts SourceProduct[]
+  syncRuns       SyncRun[]
+  importCodes    SessionImportCode[]
+
+  @@index([sessionStatus])
+  @@map("source_accounts")
+}
+
+/// 一次性配对码，用于从浏览器导入合法会话（spec §10.3）。
+model SessionImportCode {
+  id              String   @id @default(cuid())
+  sourceAccountId String
+  /// 只存哈希，泄库也无法反推配对码。
+  codeHash        String   @unique
+  expiresAt       DateTime
+  usedAt          DateTime?
+  createdAt       DateTime @default(now())
+
+  sourceAccount SourceAccount @relation(fields: [sourceAccountId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@map("session_import_codes")
+}
+
+// ---------------------------------------------------------------- 货源商品
+
+/// 外部平台原始数据 + 同步运行状态。同步任务只写这张表。
+model SourceProduct {
+  id              String @id @default(cuid())
+  sourceAccountId String
+  externalId      String
+
+  goodsType         String?
+  sourceTitle       String?
+  sourceDescription String?
+  sourceImageUrl    String?
+  sourcePrice       Decimal?
+  stockCount        Int?
+  sourceStatus      String @default("UNKNOWN")
+  availability      String @default("UNKNOWN")
+  syncStatus        String @default("STALE")
+  sourceUrl         String?
+
+  /// 完整原始响应。字段会变，先全存下来再说（spec §9.1）。
+  rawPayload String?
+
+  lastCheckedAt DateTime?
+  /// 最近一次"成功"的时间。失败不更新这个字段，
+  /// 前台"上次确认时间"必须用它，否则会把失败时间说成确认时间。
+  lastSuccessAt DateTime?
+  freshUntil    DateTime?
+  staleUntil    DateTime?
+  nextCheckAt   DateTime?
+
+  consecutiveFailures   Int @default(0)
+  /// 连续拿到库存 0 的次数；到 2 才判定缺货（spec §16.1）。
+  consecutiveOutOfStock Int @default(0)
+  lastError             String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sourceAccount SourceAccount   @relation(fields: [sourceAccountId], references: [id], onDelete: Cascade)
+  products      Product[]
+  statusHistory StatusHistory[]
+  syncRuns      SyncRun[]
+
+  @@unique([sourceAccountId, externalId])
+  @@index([nextCheckAt])
+  @@index([sourceStatus, availability])
+  @@index([syncStatus])
+  @@map("source_products")
+}
+
+// ---------------------------------------------------------------- 展示商品
+
+model Category {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique
+  description String?
+  sortOrder   Int     @default(0)
+  isVisible   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+
+  @@index([sortOrder])
+  @@map("categories")
+}
+
+/// 管理员可编辑的对外展示内容。同步任务禁止写这张表的展示字段（spec §6.2）。
+model Product {
+  id              String  @id @default(cuid())
+  sourceProductId String?
+  slug            String  @unique
+
+  publicationStatus String @default("DRAFT")
+
+  title       String
+  subtitle    String?
+  description String?
+  coverUrl    String?
+  gallery     String @default("[]")
+
+  displayPrice    Decimal?
+  priceMode       String @default("SOURCE")
+  priceAdjustment Decimal?
+
+  categoryId String?
+  tags       String @default("[]")
+
+  buttonText        String  @default("前往商品页")
+  targetUrlOverride String?
+
+  sortOrder Int     @default(0)
+  featured  Boolean @default(false)
+  /// true = 完全锁定，任何同步都不得改动此商品的展示层。
+  manualLock            Boolean @default(false)
+  autoHideWhenOutOfStock Boolean @default(false)
+
+  seoTitle       String?
+  seoDescription String?
+
+  /// 冷热分级依据（spec §12.5）。
+  lastViewedAt DateTime?
+  viewCount    Int       @default(0)
+  clickCount   Int       @default(0)
+
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  sourceProduct SourceProduct? @relation(fields: [sourceProductId], references: [id], onDelete: SetNull)
+  category      Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  clickEvents   ClickEvent[]
+
+  @@index([publicationStatus, sortOrder])
+  @@index([categoryId])
+  @@index([sourceProductId])
+  @@index([featured])
+  @@map("products")
+}
+
+// ---------------------------------------------------------------- 同步与历史
+
+model SyncRun {
+  id              String  @id @default(cuid())
+  sourceAccountId String?
+  sourceProductId String?
+
+  trigger String
+  scope   String
+  status  String @default("QUEUED")
+
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  itemsSeen    Int @default(0)
+  itemsChanged Int @default(0)
+  itemsFailed  Int @default(0)
+
+  error    String?
+  metadata String?
+
+  createdAt DateTime @default(now())
+
+  sourceAccount SourceAccount? @relation(fields: [sourceAccountId], references: [id], onDelete: SetNull)
+  sourceProduct SourceProduct? @relation(fields: [sourceProductId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([sourceAccountId, createdAt])
+  @@map("sync_runs")
+}
+
+/// 只在状态真的发生变化时写入（spec §6.3），否则每分钟一条会撑爆表。
+model StatusHistory {
+  id              String @id @default(cuid())
+  sourceProductId String
+
+  oldSourceStatus String?
+  newSourceStatus String?
+  oldAvailability String?
+  newAvailability String?
+  oldPrice        Decimal?
+  newPrice        Decimal?
+  oldStockCount   Int?
+  newStockCount   Int?
+
+  trigger    String?
+  observedAt DateTime     @default(now())
+  metadata   String?
+
+  sourceProduct SourceProduct @relation(fields: [sourceProductId], references: [id], onDelete: Cascade)
+
+  @@index([sourceProductId, observedAt])
+  @@map("status_history")
+}
+
+// ---------------------------------------------------------------- 埋点与设置
+
+model ClickEvent {
+  id        String         @id @default(cuid())
+  productId String
+  eventType String
+
+  referrer  String?
+  utmSource String?
+  country   String?
+  /// 只存哈希，不存明文 UA / IP（spec §22）。
+  userAgentHash String?
+  ipHash        String?
+
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, createdAt])
+  @@index([eventType, createdAt])
+  @@index([createdAt])
+  @@map("click_events")
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
+}
