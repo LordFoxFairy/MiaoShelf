@@ -13,7 +13,7 @@
 import { PrismaClient } from "@prisma/client";
 import { dequeueRefresh, enqueueRefresh, queueSize } from "@/lib/sync/queue";
 import { refreshSourceProduct } from "@/lib/sync/refresh";
-import { writeHeartbeat } from "@/lib/cache";
+import { writeHeartbeat } from "@/lib/heartbeat";
 
 const prisma = new PrismaClient();
 

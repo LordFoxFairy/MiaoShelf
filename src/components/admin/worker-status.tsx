@@ -1,4 +1,4 @@
-import { readHeartbeatState } from "@/lib/cache";
+import { readHeartbeatState } from "@/lib/heartbeat";
 import { cn } from "@/lib/utils";
 
 /**

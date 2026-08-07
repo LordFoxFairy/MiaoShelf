@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/db";
-import { readHeartbeatState } from "@/lib/cache";
+import { readHeartbeatState } from "@/lib/heartbeat";
 import { queueSize } from "@/lib/sync/queue";
 
 /** 健康检查（spec §26）。供部署时的存活探针使用。 */

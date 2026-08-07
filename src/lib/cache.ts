@@ -176,44 +176,9 @@ export async function checkRateLimit(
   };
 }
 
-/** Worker 心跳（spec §26）。 */
-let heartbeat: Date | null = null;
-
-export async function writeHeartbeat(): Promise<void> {
-  heartbeat = new Date();
-}
-
-export async function readHeartbeat(): Promise<Date | null> {
-  return heartbeat;
-}
-
-/**
- * 同步进程是否还活着。
- *
- * 判活的时间比较放在这里而不是组件里：组件渲染必须是纯函数，
- * 读当前时间属于副作用，放进去会让同一份数据在不同渲染得出不同结果。
- */
-export interface HeartbeatState {
-  alive: boolean;
-  lastBeatAt: Date | null;
-}
-
-export async function readHeartbeatState(
-  staleAfterMs = 90_000,
-): Promise<HeartbeatState> {
-  const lastBeatAt = await readHeartbeat();
-  return {
-    alive:
-      lastBeatAt !== null &&
-      Date.now() - lastBeatAt.getTime() < staleAfterMs,
-    lastBeatAt,
-  };
-}
-
 /** 仅供测试。 */
 export function __resetCache(): void {
   store.clear();
   counters.clear();
   catalogVersion = 0;
-  heartbeat = null;
 }

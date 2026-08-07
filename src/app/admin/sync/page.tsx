@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/admin/page-header";
 import { SyncRunList } from "@/components/admin/sync-run-list";
 import { StatCard } from "@/components/admin/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { readHeartbeatState } from "@/lib/cache";
+import { readHeartbeatState } from "@/lib/heartbeat";
 
 export const metadata = { title: "同步任务" };
 export const dynamic = "force-dynamic";
