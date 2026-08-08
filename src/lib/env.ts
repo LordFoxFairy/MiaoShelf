@@ -55,6 +55,8 @@ export const envSchema = z.object({
 
   SOURCE_ACCOUNT_CONCURRENCY: z.coerce.number().int().positive().default(1),
   GLOBAL_SOURCE_CONCURRENCY: z.coerce.number().int().positive().default(3),
+  /** 每次请求之间的最小间隔，也是限流器加速的下限。调大 = 对货源更温和。 */
+  SOURCE_MIN_INTERVAL_MS: z.coerce.number().int().positive().default(800),
   LOW_STOCK_THRESHOLD: z.coerce.number().int().nonnegative().default(5),
 
   PLAYWRIGHT_HEADLESS: z.coerce.boolean().default(true),

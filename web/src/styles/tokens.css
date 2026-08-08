@@ -1,0 +1,53 @@
+/**
+ * 设计令牌 —— 逐项对照参考图取值。
+ *
+ * 关键观察（之前做错的地方）：
+ *   1. 渐变**只在右侧工作区**，而且集中在右上角；侧栏是纯白，不参与渐变。
+ *   2. 左下大面积是近白 #fafbfc，不是灰蓝色。
+ *   3. 侧栏图标是彩色应用图标（圆角方块），不是灰底首字。
+ *
+ * 只做浅色主题，不提供暗色——参考图就是浅色，暗色会失真。
+ */
+
+:root {
+  color-scheme: light; /* 明确只走浅色，避免浏览器自动反色 */
+
+  --page: #fafbfc; /* 工作区底色，近白 */
+  --tint-mint: rgba(198, 233, 220, 0.55); /* 右上青绿晕 */
+  --tint-lilac: rgba(214, 206, 244, 0.45); /* 右侧淡紫晕 */
+
+  --surface: #ffffff;
+  --sunken: #f4f6f9; /* 输入框、图标底 */
+
+  --ink: #1a1d26;
+  --ink-soft: #4b5565;
+  --muted: #98a2b3;
+  --line: #edf0f4;
+  --line-strong: #e2e7ee;
+
+  --brand: #3b6ef5;
+  --brand-deep: #2c5ce8;
+  --brand-tint: #eef3ff;
+
+  --live: #16a34a;
+  --low: #ea8c00;
+  --gone: #e5484d;
+
+  /* 阴影都很浅，靠层次分层而不是压深 */
+  --shadow-card: 0 1px 2px rgba(26, 29, 38, 0.04);
+  --shadow-float: 0 1px 3px rgba(26, 29, 38, 0.04),
+    0 10px 24px -10px rgba(26, 29, 38, 0.1);
+  --shadow-hover: 0 2px 6px rgba(26, 29, 38, 0.06),
+    0 16px 32px -14px rgba(59, 110, 245, 0.28);
+  --ring: 0 0 0 3px rgba(59, 110, 245, 0.16);
+
+  --font-display: Outfit, -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --r-xl: 18px;
+  --r-lg: 14px;
+  --r-md: 10px;
+  --r-sm: 8px;
+  --sidebar-w: 268px;
+}

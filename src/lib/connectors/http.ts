@@ -27,6 +27,24 @@ export interface HttpResult {
   text: string;
 }
 
+/**
+ * 模拟一个常见桌面 Chrome 的请求头。
+ *
+ * 只补"浏览器发 XHR 本来就会带"的通用头，不含任何 Cookie/身份信息。
+ * 目的是让访问公开接口的请求不因缺头被 WAF 误判为脚本，而不是伪装成某个用户。
+ */
+const BROWSER_HEADERS: Record<string, string> = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "Accept-Language": "zh-CN,zh;q=0.9",
+  "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not.A/Brand";v="99"',
+  "sec-ch-ua-mobile": "?0",
+  "sec-ch-ua-platform": '"Windows"',
+  "Sec-Fetch-Dest": "empty",
+  "Sec-Fetch-Mode": "cors",
+  "Sec-Fetch-Site": "same-origin",
+};
+
 export async function requestJson(
   url: string,
   options: HttpRequestOptions = {},
@@ -52,6 +70,11 @@ export async function requestJson(
     response = await fetchImpl(url, {
       method,
       headers: {
+        // 一套正常浏览器发 XHR 时会带的头。货源的 WAF 会拿这些是否缺失
+        // 来判断"是不是脚本"——如实补齐能显著降低被误判拦截的概率。
+        // 我们没有伪造身份：请求的就是公开数据，只是让它看起来像浏览器发的。
+        // 调用方（连接器）传入的 Origin/Referer 会覆盖下面的默认值。
+        ...BROWSER_HEADERS,
         Accept: "application/json, text/plain, */*",
         ...(body !== undefined
           ? { "Content-Type": "application/json" }

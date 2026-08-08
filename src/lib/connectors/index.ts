@@ -6,6 +6,7 @@ import { loadCredentials } from "@/lib/source-credentials";
 import type { ProviderId, SourceConnector } from "@/lib/connectors/types";
 import { prisma } from "@/lib/db";
 import { getSourceFetch } from "@/lib/connectors/proxy-fetch";
+import { loadEnv } from "@/lib/env";
 
 /**
  * 连接器注册。
@@ -35,8 +36,8 @@ export async function connectorForAccount(
   if (!credentials) return null;
 
   return createConnector(account.provider as ProviderId, credentials, {
-    // 加抖动，避免定时任务把外部接口打出尖峰（spec §12.4）。
-    jitterMs: 300,
+    // 请求最小间隔，也是限流器加速下限。调大 SOURCE_MIN_INTERVAL_MS 对货源更温和（spec §12.4）。
+    jitterMs: loadEnv().SOURCE_MIN_INTERVAL_MS,
     timeoutMs: 15_000,
     // 配了 SOURCE_HTTP_PROXY 就走代理出口，没配就是普通 fetch。
     fetchImpl: getSourceFetch(),

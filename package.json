@@ -18,7 +18,12 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "create-admin": "tsx scripts/create-admin.ts",
-    "check-source": "tsx --env-file-if-exists=.env --tsconfig tsconfig.worker.json scripts/check-source.ts"
+    "check-source": "tsx --env-file-if-exists=.env --tsconfig tsconfig.worker.json scripts/check-source.ts",
+    "smoke-shop": "tsx --env-file-if-exists=.env --tsconfig tsconfig.worker.json scripts/smoke-shop.ts",
+    "shop-cookie": "tsx --env-file-if-exists=.env --tsconfig tsconfig.worker.json scripts/shop-cookie.ts",
+    "sync": "tsx --env-file-if-exists=.env --tsconfig tsconfig.worker.json scripts/sync-catalog.ts",
+    "schedule": "bash scripts/schedule.sh",
+    "check-site": "tsx --tsconfig tsconfig.worker.json scripts/audit-site.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

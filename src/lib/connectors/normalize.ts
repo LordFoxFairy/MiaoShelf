@@ -103,11 +103,10 @@ export function availabilityFromStock(
 /** 判断响应体是不是 HTML（验证码页/WAF 拦截页的典型特征）。 */
 export function looksLikeHtml(body: string): boolean {
   const head = body.slice(0, 200).toLowerCase();
-  return (
-    head.includes("<!doctype html") ||
-    head.includes("<html") ||
-    head.includes("<head")
-  );
+  // 注意 doctype 后面的空格是【可选】的：阿里云 ESA 的滑动验证页压缩后发的是
+  // `<!doctypehtml>`（无空格）。之前写死匹配 "<!doctype html" 会漏判，
+  // 结果挑战页被当成正常响应，WAF 兜底整条路都不触发。
+  return /<!doctype\s*html|<html[\s>]|<head[\s>]|<meta\s/.test(head);
 }
 
 /** 日志脱敏：任何可能含凭据的字符串过一遍再输出（spec §22）。 */

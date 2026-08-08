@@ -1,5 +1,6 @@
 import { requestJson } from "@/lib/connectors/http";
 import { AdaptiveRateLimiter } from "@/lib/connectors/rate-limiter";
+import { collectViaBrowser } from "@/lib/connectors/ldxp-shop/browser-collector";
 import { parsePrice, parseStock, pickString, safeErrorDetail } from "@/lib/connectors/normalize";
 import {
   ConnectorError,
@@ -96,6 +97,12 @@ export class LdxpShopConnector implements SourceConnector {
   private readonly options: ConnectorRuntimeOptions;
   private readonly lowStockThreshold: number;
   private readonly limiter: AdaptiveRateLimiter;
+  /**
+   * WAF 放行 cookie（如 acw_tc/cdn_sec_tc/PHPSESSID）。
+   * 由本机浏览器过一次 WAF 后导入，服务器带上它，无头纯 HTTP 也能放行。
+   * 过期后请求会撞回挑战页，需在本机重新过一次刷新。
+   */
+  private readonly wafCookie: string | null;
   /** 拿到的分类，用于遍历全部商品。 */
   private categoryCache: string[] | null = null;
 
@@ -114,6 +121,7 @@ export class LdxpShopConnector implements SourceConnector {
     this.apiBase = parsed.apiBase;
     // token 也允许显式覆盖（凭据里的 username 字段复用为 token）。
     this.token = credentials.username?.trim() || parsed.token;
+    this.wafCookie = credentials.cookie?.trim() || null;
     this.options = options;
     this.lowStockThreshold = options.lowStockThreshold ?? 5;
     this.limiter = new AdaptiveRateLimiter({
@@ -133,6 +141,8 @@ export class LdxpShopConnector implements SourceConnector {
         headers: {
           Origin: this.apiBase,
           Referer: `${this.apiBase}/shop/${this.token}`,
+          // 带上 WAF 放行 cookie（本机过一次后导入的），无头也能被放行。
+          ...(this.wafCookie ? { Cookie: this.wafCookie } : {}),
         },
         body: { token: this.token, ...body },
         timeoutMs: this.options.timeoutMs ?? 15_000,
@@ -166,6 +176,21 @@ export class LdxpShopConnector implements SourceConnector {
         else if (error.kind === "SERVER") this.limiter.onServerError();
         else if (error.kind === "NETWORK" || error.kind === "TIMEOUT") {
           this.limiter.onNetworkError();
+        }
+
+        // 撞上 WAF 挑战且配了浏览器兜底：用真浏览器再试一次。
+        // 纯 HTTP 换不了 IP 时，让浏览器把挑战跑过去，拿公开数据。
+        const fallback = this.options.browserFallback;
+        if (error.kind === "FORBIDDEN" && fallback) {
+          return collectViaBrowser<T>(path, body, {
+            apiBase: this.apiBase,
+            token: this.token,
+            profilePath: fallback.profilePath,
+            headless: fallback.headless,
+            timeoutMs: this.options.timeoutMs ?? 45_000,
+            manual: fallback.manual,
+            manualTimeoutMs: fallback.manualTimeoutMs,
+          });
         }
       }
       throw error;

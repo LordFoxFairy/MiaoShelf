@@ -52,3 +52,11 @@ yarn-error.log*
 
 # prisma generated client
 packages/db/generated/
+
+# 采集产物：商品图和数据由 pnpm sync 生成，不进版本库
+web/public/img/
+web/public/products.json
+web/dist/
+
+# 环境变量没传进脚本时会误建的目录（曾装过临时凭据）
+undefined/
