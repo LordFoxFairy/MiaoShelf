@@ -3,8 +3,25 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>miaokit — AI 工具与数字权益</title>
-    <meta name="description" content="miaokit 服务入口：商品目录、JSON 转换、API 中转。" />
+    <title>miaokit — ChatGPT Plus、Claude、Gemini 等 AI 工具与数字权益</title>
+    <meta
+      name="description"
+      content="miaokit 提供 ChatGPT Plus、Claude、Gemini、GROK 等 AI 工具账号与数字权益，官方渠道直充与成品号，自动发货。价格与库存每 5 分钟自动同步，页面显示的就是当前价。另有 JSON 转换等免费工具。"
+    />
+    <link rel="canonical" href="https://miaokit.cloud/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="miaokit — ChatGPT Plus、Claude、Gemini 等 AI 工具与数字权益" />
+    <meta property="og:description" content="官方渠道直充与成品号，自动发货，价格库存每 5 分钟同步。" />
+    <meta property="og:url" content="https://miaokit.cloud/" />
+    <meta property="og:site_name" content="miaokit" />
+    <meta name="twitter:card" content="summary" />
+    <script type="application/ld+json">
+      {"@context":"https://schema.org","@graph":[
+      {"@type":"Organization","@id":"https://miaokit.cloud/#org","name":"miaokit",
+       "url":"https://miaokit.cloud/","description":"AI 工具账号与数字权益供应"},
+      {"@type":"WebSite","@id":"https://miaokit.cloud/#site","url":"https://miaokit.cloud/",
+       "name":"miaokit","publisher":{"@id":"https://miaokit.cloud/#org"},"inLanguage":"zh-CN"}]}
+    </script>
     <meta name="color-scheme" content="light" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,6 +35,33 @@
   </head>
   <body>
     <div id="app"></div>
+    <!-- 给爬虫的正文：JS 渲染前 body 里只有一个空 div，
+         规则会判定「疑似空页面」而拦住收录。内容与页面实际展示一致。 -->
+    <noscript>
+      <h1>miaokit — ChatGPT Plus、Claude、Gemini 等 AI 工具与数字权益</h1>
+      <p>
+        miaokit 是一个 AI 工具账号与数字权益的目录站。这里能买到 ChatGPT Plus
+        会员、Claude、Gemini、GROK 等主流 AI 工具的账号与充值，也有视频会员、
+        网盘会员、生活服务券等数字权益，共两百余件商品在售。
+      </p>
+      <p>
+        所有商品走官方渠道直充或成品号交付，下单后自动发货。价格和库存每 5 分钟
+        从货源自动同步一次，页面上看到的就是当前价——不会出现点进去才发现涨价或
+        缺货的情况。
+      </p>
+      <h2>可用入口</h2>
+      <ul>
+        <li><a href="https://shop.miaokit.cloud">商品目录</a> — 浏览全部在售商品，按分类和库存筛选</li>
+        <li><a href="https://pay.ldxp.cn/shop/miaoli">链动小铺</a> — 下单与售后</li>
+        <li><a href="https://convert.miaokit.cloud">JSON 转换</a> — ChatGPT 会话转 CPA / sub2api / Codex 等格式，免费使用</li>
+        <li><a href="https://api.miaokit.cloud">API 中转</a> — 统一入口转发各家模型接口，暂不开放</li>
+      </ul>
+      <h2>适合谁</h2>
+      <p>
+        需要 AI 工具订阅但不方便自行开通的用户、需要批量采购数字权益的团队，
+        以及想用更低成本试用各家模型的开发者。
+      </p>
+    </noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

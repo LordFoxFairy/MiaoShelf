@@ -17,6 +17,13 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
 import { LdxpShopConnector } from "@/lib/connectors/ldxp-shop/connector";
+import {
+  catSlug,
+  productPage,
+  categoryPage,
+  sitemap,
+  type PageProduct,
+} from "./lib/static-pages";
 import type { NormalizedGoods } from "@/lib/connectors/types";
 
 const SHOP_URL = process.env.SHOP_URL ?? "https://pay.ldxp.cn/shop/miaoli";
@@ -254,6 +261,12 @@ async function main() {
     console.log("复用已有前端产物，更新 products.json 与图片");
   }
 
+  // 预渲染首页 + 为每件商品/每个分类生成独立静态页。
+  // 不做的话所有路径返回同一份 HTML，Google 判定重复内容，
+  // 215 件商品最多只能收录 1 个页面（2026-08-09 SEO 诊断结论）。
+  prerender("web/dist/index.html", catalog.items, catalog.shopName);
+  buildStaticPages("web/dist", catalog.items);
+
   console.log(`发布商品站（${CF_PROJECT}）…`);
   execSync(
     `npx wrangler pages deploy web/dist --project-name=${CF_PROJECT} --commit-dirty=true`,
@@ -273,6 +286,170 @@ async function main() {
  * 所以这里只需要构建 + 发布，不用管数据。
  * 门户目录不存在（比如别人 clone 了只跑采集）就跳过，不该让同步失败。
  */
+/**
+ * 把商品预渲染进 HTML。
+ *
+ * 为什么必须做：前端是运行时 fetch 数据的，爬虫拿到的 HTML 只有
+ * `<div id="app"></div>`（实测 1004 字节，商品关键词 0 个）。
+ * 搜索引擎收录的就是这个空壳——搜「ChatGPT Plus 代充」永远找不到。
+ *
+ * 做法是往 body 里塞一段静态商品清单 + JSON-LD 结构化数据。
+ * 前端启动后会用 innerHTML 覆盖 #app，所以这段内容对真人不可见，
+ * 但爬虫在不执行 JS 时能读到——不是欺骗，内容和页面实际展示的一致。
+ */
+function prerender(
+  htmlPath: string,
+  items: Array<{
+    title: string;
+    price: string | null;
+    url: string;
+    category: string;
+    availabilityHint: string;
+  }>,
+  shopName: string | null,
+): void {
+  const { readFileSync, writeFileSync, existsSync } =
+    require("node:fs") as typeof import("node:fs");
+  if (!existsSync(htmlPath)) return;
+
+  const esc = (t: unknown) =>
+    String(t ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+
+  const live = items.filter((i) => i.availabilityHint !== "OUT_OF_STOCK");
+  // 太多会把 HTML 撑得很大，取有代表性的一批
+  const listed = live.slice(0, 60);
+
+  const list = listed
+    .map(
+      (i) =>
+        `<li><a href="${esc(i.url)}">${esc(i.title)}</a> — ${esc(i.category)} ¥${esc(i.price)}</li>`,
+    )
+    .join("");
+
+  // JSON-LD：搜索结果里能显示价格区间等富媒体信息
+  const prices = live
+    .map((i) => Number(i.price))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  const ld = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `${shopName ?? "miaokit"} 商品目录`,
+    numberOfItems: live.length,
+    itemListElement: listed.slice(0, 20).map((i, n) => ({
+      "@type": "ListItem",
+      position: n + 1,
+      item: {
+        "@type": "Product",
+        name: i.title,
+        category: i.category,
+        offers: {
+          "@type": "Offer",
+          price: i.price,
+          priceCurrency: "CNY",
+          availability: "https://schema.org/InStock",
+        },
+      },
+    })),
+  };
+
+  const seo = `<noscript><div>
+<h1>${esc(shopName ?? "miaokit")} — ChatGPT Plus、Claude、Gemini 等 AI 工具与数字权益</h1>
+<p>共 ${live.length} 件在售${prices.length ? `，最低 ¥${Math.min(...prices).toFixed(2)}` : ""}。价格库存每 5 分钟自动同步。</p>
+<ul>${list}</ul>
+</div></noscript>
+<script type="application/ld+json">${JSON.stringify(ld)}</script>`;
+
+  const html = readFileSync(htmlPath, "utf8");
+  if (html.includes("application/ld+json")) return; // 已注入过
+  writeFileSync(htmlPath, html.replace("</body>", `${seo}\n</body>`), "utf8");
+}
+
+/**
+ * 生成商品页、分类页、sitemap、robots。
+ *
+ * 每页独立 URL + 独立 title/description + canonical + Product 结构化数据，
+ * 这是「商品能被收录」的前提。页面之间有面包屑和同类推荐互链，
+ * 让爬虫能顺着爬完整站。
+ */
+function buildStaticPages(dir: string, items: PageProduct[]): void {
+  const { mkdirSync, writeFileSync } = require("node:fs") as typeof import("node:fs");
+
+  // 分类归组
+  const byCat = new Map<string, PageProduct[]>();
+  for (const item of items) {
+    const name = item.category?.trim() || "其他";
+    const list = byCat.get(name);
+    if (list) list.push(item);
+    else byCat.set(name, [item]);
+  }
+  const cats = [...byCat.entries()].map(([name, list], i) => ({
+    name,
+    slug: catSlug(name, i),
+    items: list,
+  }));
+  const slugOf = new Map(cats.map((c) => [c.name, c.slug]));
+
+  // 商品页
+  for (const item of items) {
+    const slug = slugOf.get(item.category?.trim() || "其他") ?? "other";
+    const siblings = (byCat.get(item.category?.trim() || "其他") ?? [])
+      .filter((p) => p.externalId !== item.externalId)
+      .slice(0, 8);
+    const out = `${dir}/p/${item.externalId}`;
+    mkdirSync(out, { recursive: true });
+    writeFileSync(
+      `${out}/index.html`,
+      productPage(item, siblings, `/c/${slug}/`),
+      "utf8",
+    );
+  }
+
+  // 分类页
+  for (const c of cats) {
+    const out = `${dir}/c/${c.slug}`;
+    mkdirSync(out, { recursive: true });
+    writeFileSync(
+      `${out}/index.html`,
+      categoryPage(c.name, c.slug, c.items),
+      "utf8",
+    );
+  }
+
+  writeFileSync(`${dir}/sitemap.xml`, sitemap(items, cats), "utf8");
+  writeFileSync(
+    `${dir}/robots.txt`,
+    "User-agent: *\nAllow: /\nSitemap: https://shop.miaokit.cloud/sitemap.xml\n",
+    "utf8",
+  );
+
+  console.log(`  静态页：${items.length} 个商品页 · ${cats.length} 个分类页`);
+}
+
+/** robots.txt 与 sitemap.xml——没有这两个文件，搜索引擎不知道该收录什么。 */
+function writeSeoFiles(dir: string, origin: string): void {
+  const { writeFileSync } = require("node:fs") as typeof import("node:fs");
+  const today = new Date().toISOString().slice(0, 10);
+  writeFileSync(
+    `${dir}/robots.txt`,
+    `User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml\n`,
+    "utf8",
+  );
+  writeFileSync(
+    `${dir}/sitemap.xml`,
+    `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>${origin}/</loc><lastmod>${today}</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>https://shop.miaokit.cloud/</loc><lastmod>${today}</lastmod><changefreq>hourly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://convert.miaokit.cloud/</loc><lastmod>${today}</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+</urlset>\n`,
+    "utf8",
+  );
+}
+
 async function deployPortal(): Promise<void> {
   const { execSync } = await import("node:child_process");
   const { existsSync } = await import("node:fs");
@@ -285,6 +462,7 @@ async function deployPortal(): Promise<void> {
     }
     console.log(`发布门户站（${CF_PORTAL}）…`);
     execSync("pnpm --dir portal build", { stdio: "inherit" });
+    writeSeoFiles("portal/dist", "https://miaokit.cloud");
     execSync(
       `npx wrangler pages deploy portal/dist --project-name=${CF_PORTAL} --commit-dirty=true`,
       { stdio: "inherit" },
