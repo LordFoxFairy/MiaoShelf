@@ -1,0 +1,441 @@
+/**
+ * miaokit 主页 —— 营销页，不是服务索引。
+ *
+ * 之前做成四张等权卡片，访客扫一眼不知道「这儿能买到什么、便宜多少」，
+ * 自然不会点。这版把商品放到主位：大标题写清品类和价格门槛，
+ * 真实商品条摆出图和价，行动按钮明确指向「浏览」和「下单」两件事。
+ *
+ * 色彩语言和商品站(shop)保持一致，让两站看起来像一家的。
+ * 只做浅色。
+ */
+
+:root {
+  color-scheme: light;
+
+  --page: #fafbfc;
+  --tint-mint: rgba(196, 234, 219, 0.55);
+  --tint-lilac: rgba(212, 204, 246, 0.45);
+
+  --surface: #ffffff;
+  --sunken: #f4f6f9;
+  --ink: #12151c;
+  --ink-soft: #4b5565;
+  --muted: #98a2b3;
+  --line: #edf0f4;
+  --line-strong: #e2e7ee;
+
+  --brand: #3b6ef5;
+  --brand-deep: #2c5ce8;
+  --live: #16a34a;
+
+  --shadow-sm: 0 1px 2px rgba(18, 21, 28, 0.04);
+  --shadow-md: 0 2px 6px rgba(18, 21, 28, 0.05),
+    0 12px 28px -14px rgba(18, 21, 28, 0.14);
+  --shadow-brand: 0 6px 20px -6px rgba(59, 110, 245, 0.5);
+
+  --font-display: Outfit, -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  font: 15px/1.6 var(--font-display);
+  background: var(--page);
+  background-image: radial-gradient(
+      1000px 620px at 88% -8%,
+      var(--tint-mint),
+      transparent 60%
+    ),
+    radial-gradient(820px 560px at 2% 106%, var(--tint-lilac), transparent 56%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 28px 24px 64px;
+}
+
+/* ── 顶栏 ── */
+.top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 68px;
+}
+.logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #4d8bff, var(--brand-deep));
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font: 700 15px/1 var(--font-data);
+  box-shadow: var(--shadow-brand);
+}
+.brand {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+/* ── Hero：整页的说服力都在这儿 ── */
+.hero {
+  margin-bottom: 40px;
+}
+.eyebrow {
+  margin: 0 0 16px;
+  font: 600 11.5px/1 var(--font-data);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--brand);
+}
+.hero h1 {
+  margin: 0 0 20px;
+  font-size: clamp(30px, 5.4vw, 56px);
+  font-weight: 600;
+  line-height: 1.18;
+  letter-spacing: -0.035em;
+}
+/* 两句各自成行，但句内自然折行——写死 <br> 在窄屏会把「Gemini」
+   「起」这种半截词单独甩一行，很难看 */
+.hero h1 .l1,
+.hero h1 .l2 {
+  display: block;
+}
+/* 「实时同步」是这个站真正的卖点——价格天天变，但页面上永远是当前价 */
+.lede .fresh {
+  color: var(--live);
+  font-weight: 500;
+}
+.lede strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.lede {
+  margin: 0 0 32px;
+  max-width: 30em;
+  color: var(--ink-soft);
+  font-size: 16.5px;
+  line-height: 1.75;
+}
+
+/* 行动按钮：主次分明——「浏览」是主路径，「下单」给已经想好的人 */
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 44px;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 14px 26px;
+  border-radius: 13px;
+  font: 600 15px/1 var(--font-display);
+  text-decoration: none;
+  transition: transform 0.18s cubic-bezier(0.2, 0.7, 0.3, 1), box-shadow 0.18s,
+    background 0.18s, border-color 0.18s;
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn-primary {
+  background: var(--brand);
+  color: #fff;
+  box-shadow: var(--shadow-brand);
+}
+.btn-primary:hover {
+  background: var(--brand-deep);
+  box-shadow: 0 10px 28px -8px rgba(59, 110, 245, 0.6);
+}
+.btn-ghost {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-sm);
+}
+.btn-ghost:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.btn:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+
+/* 数字：用等宽体，是「数据」不是装饰 */
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 36px;
+  margin: 0;
+}
+.stat dt {
+  font: 700 27px/1.1 var(--font-data);
+  letter-spacing: -0.03em;
+  margin-bottom: 5px;
+}
+.stat dd {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ── 签名元素：实时商品条 ──
+   与其写「商品丰富价格实惠」，不如把真实商品图和价格摆出来。
+   这是活的证据，比任何文案都有说服力，而且数据本来就有。 */
+.strip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 0 14px;
+  margin-bottom: 52px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.strip::-webkit-scrollbar {
+  display: none;
+}
+.chip {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 14px 8px 8px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
+}
+.chip:hover {
+  transform: translateY(-2px);
+  border-color: var(--brand);
+  box-shadow: var(--shadow-md);
+}
+.chip img {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--sunken);
+  flex: 0 0 auto;
+}
+.chip-t {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.chip-p {
+  font: 700 13px/1 var(--font-data);
+  color: var(--live);
+  white-space: nowrap;
+}
+
+/* ── 分区：工具箱 / 服务 / 教程 ──
+   分开而不是全塞进「配套工具」：自助工具、需开通的服务、内容教程
+   性质不同，混在一起访客分不清哪个能直接用。 */
+.sec {
+  margin-bottom: 34px;
+}
+.sec-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.sec-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.sec-hint {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.tools {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+.tool {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 17px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 15px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
+}
+.tool:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+}
+.tool:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+.tool-icon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+.tool-body {
+  min-width: 0;
+}
+.tool-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.tool-name em {
+  font: 600 10.5px/1.5 var(--font-data);
+  font-style: normal;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
+  color: var(--accent);
+}
+.tool-desc {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+/* 未上线：不可点，样式上说清楚 */
+.tool.is-soon {
+  cursor: default;
+  background: color-mix(in srgb, var(--surface) 65%, transparent);
+}
+.tool.is-soon:hover {
+  transform: none;
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
+}
+.tool.is-soon .tool-icon {
+  background: var(--line);
+  color: var(--muted);
+}
+
+/* 受限：链接能点但不对外开放，用中性灰区分，
+   免得访客点进去发现进不了、以为站坏了 */
+.tool.is-limited .tool-icon,
+.tool.is-limited .tool-name em {
+  background: var(--line);
+  color: var(--muted);
+}
+.tool.is-limited:hover {
+  border-color: var(--line-strong);
+}
+
+footer {
+  margin-top: 56px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+footer a {
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+footer a:hover {
+  color: var(--brand);
+}
+.dot-sep {
+  opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .wrap {
+    padding: 18px 18px 44px;
+  }
+  /* 手机首屏很宝贵——压缩上部留白，让真实商品条尽量进第一屏，
+     那是最能说服人的东西，不该被推到底下 */
+  .top {
+    margin-bottom: 26px;
+  }
+  .eyebrow {
+    margin-bottom: 10px;
+  }
+  .hero h1 {
+    line-height: 1.24;
+    margin-bottom: 14px;
+  }
+  .lede {
+    font-size: 15px;
+    line-height: 1.65;
+    margin-bottom: 20px;
+  }
+  .cta {
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .btn {
+    flex: 1 1 100%;
+    justify-content: center;
+    padding: 13px 20px;
+    font-size: 14.5px;
+  }
+  .stats {
+    gap: 22px;
+  }
+  .stat dt {
+    font-size: 21px;
+  }
+  .stat dd {
+    font-size: 12px;
+  }
+  .hero {
+    margin-bottom: 24px;
+  }
+  /* 商品条在窄屏往外顶满，让人一眼看出「可以横向滑」 */
+  .strip {
+    margin: 0 -18px 40px;
+    padding: 4px 18px 14px;
+  }
+  .tools {
+    grid-template-columns: 1fr;
+  }
+}

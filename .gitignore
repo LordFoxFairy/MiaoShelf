@@ -60,3 +60,7 @@ web/dist/
 
 # 环境变量没传进脚本时会误建的目录（曾装过临时凭据）
 undefined/
+
+# 门户构建产物
+portal/dist/
+portal/node_modules/

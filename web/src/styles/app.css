@@ -606,6 +606,51 @@ body {
   }
 }
 
+
+/* ── 工具栏里的库存筛选 ──
+   注意：这套基础样式必须在窄屏媒体查询【之前】定义。
+   之前重写移动端时把它整段覆盖掉了，导致桌面端这三个按钮退化成
+   浏览器默认外观（2px outset 黑边、无圆角、Arial），和全站完全不搭。 */
+.toolbar .chips {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--sunken);
+  border-radius: var(--r-md);
+}
+.toolbar .chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--ink-soft);
+  font: 500 12.5px/1 var(--font-display);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.toolbar .chip:hover {
+  color: var(--ink);
+}
+.toolbar .chip[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--brand);
+  font-weight: 600;
+  box-shadow: var(--shadow-card);
+}
+.toolbar .chip:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+.toolbar .chip b {
+  font: 600 10.5px/1 var(--font-data);
+  opacity: 0.6;
+}
+
 /* ── 窄屏：把控件压到最小，让商品尽快出现 ──
    买家打开手机是来看商品的，不是来用筛选器的。实测原来第一张卡片
    要滑到 564px 才露头（屏高 844），前 2/3 全是控件——必须压缩。 */

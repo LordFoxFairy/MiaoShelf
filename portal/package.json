@@ -1,0 +1,15 @@
+{
+  "name": "miaokit-portal",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "deploy": "pnpm build && npx wrangler pages deploy dist --project-name=miaokit-portal --commit-dirty=true"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^7.1.14"
+  }
+}

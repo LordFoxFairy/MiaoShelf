@@ -22,6 +22,8 @@ import type { NormalizedGoods } from "@/lib/connectors/types";
 const SHOP_URL = process.env.SHOP_URL ?? "https://pay.ldxp.cn/shop/miaoli";
 const OUT_FILE = process.env.CATALOG_OUT ?? "web/public/products.json";
 const CF_PROJECT = process.env.CF_PAGES_PROJECT ?? "miaokit-catalog";
+/** 门户站——数据变了它上面的数字和商品条也得跟着变，所以一起发布。 */
+const CF_PORTAL = process.env.CF_PORTAL_PROJECT ?? "miaokit-portal";
 
 /** 原始数据里的分类信息，规范化字段没带，得从 raw 里取。 */
 function categoryOf(item: NormalizedGoods): string {
@@ -252,11 +254,48 @@ async function main() {
     console.log("复用已有前端产物，更新 products.json 与图片");
   }
 
-  console.log(`发布到 Cloudflare Pages（${CF_PROJECT}）…`);
+  console.log(`发布商品站（${CF_PROJECT}）…`);
   execSync(
     `npx wrangler pages deploy web/dist --project-name=${CF_PROJECT} --commit-dirty=true`,
     { stdio: "inherit" },
   );
+
+  // 门户也要重发：它在运行时 fetch 商品数据，上下架后页面上的
+  // 「196 件在售」和商品条会跟着变。不重发的话 CDN 上还是旧的 HTML/JS，
+  // 虽然数据是新的，但缓存的静态资源可能对不上。
+  await deployPortal();
+}
+
+/**
+ * 发布门户站。
+ *
+ * 门户没有自己的数据文件——它运行时去商品站拉 products.json，
+ * 所以这里只需要构建 + 发布，不用管数据。
+ * 门户目录不存在（比如别人 clone 了只跑采集）就跳过，不该让同步失败。
+ */
+async function deployPortal(): Promise<void> {
+  const { execSync } = await import("node:child_process");
+  const { existsSync } = await import("node:fs");
+  if (!existsSync("portal/package.json")) return;
+
+  try {
+    if (!existsSync("portal/node_modules")) {
+      console.log("门户首次构建，安装依赖…");
+      execSync("pnpm --dir portal install", { stdio: "inherit" });
+    }
+    console.log(`发布门户站（${CF_PORTAL}）…`);
+    execSync("pnpm --dir portal build", { stdio: "inherit" });
+    execSync(
+      `npx wrangler pages deploy portal/dist --project-name=${CF_PORTAL} --commit-dirty=true`,
+      { stdio: "inherit" },
+    );
+  } catch (error) {
+    // 门户发布失败不该让整次同步算失败——商品站才是主线
+    console.warn(
+      "⚠ 门户发布失败（商品站已更新）：",
+      error instanceof Error ? error.message.slice(0, 120) : String(error),
+    );
+  }
 }
 
 /** 连续失败几次才通知——偶发网络抖动不值得打扰。 */
