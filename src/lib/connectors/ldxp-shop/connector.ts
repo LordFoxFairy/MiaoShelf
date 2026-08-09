@@ -1,6 +1,5 @@
 import { requestJson } from "@/lib/connectors/http";
 import { AdaptiveRateLimiter } from "@/lib/connectors/rate-limiter";
-import { collectViaBrowser } from "@/lib/connectors/ldxp-shop/browser-collector";
 import { parsePrice, parseStock, pickString, safeErrorDetail } from "@/lib/connectors/normalize";
 import {
   ConnectorError,
@@ -178,20 +177,9 @@ export class LdxpShopConnector implements SourceConnector {
           this.limiter.onNetworkError();
         }
 
-        // 撞上 WAF 挑战且配了浏览器兜底：用真浏览器再试一次。
-        // 纯 HTTP 换不了 IP 时，让浏览器把挑战跑过去，拿公开数据。
-        const fallback = this.options.browserFallback;
-        if (error.kind === "FORBIDDEN" && fallback) {
-          return collectViaBrowser<T>(path, body, {
-            apiBase: this.apiBase,
-            token: this.token,
-            profilePath: fallback.profilePath,
-            headless: fallback.headless,
-            timeoutMs: this.options.timeoutMs ?? 45_000,
-            manual: fallback.manual,
-            manualTimeoutMs: fallback.manualTimeoutMs,
-          });
-        }
+        // 这里曾有「撞 WAF 就开浏览器手动过滑块」的兜底。已移除：
+        // 实测阿里云 ESA 的滑块过不了（拟人轨迹 + uc 指纹掩蔽都试过），
+        // 而采集只在本机跑、IP 干净，根本走不到这条路。
       }
       throw error;
     }

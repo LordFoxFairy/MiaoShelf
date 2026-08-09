@@ -165,22 +165,4 @@ export interface ConnectorRuntimeOptions {
   fetchImpl?: typeof fetch;
   /** 每次请求之间的抖动，避免打爆外部接口（spec §12.4）。 */
   jitterMs?: number;
-  /**
-   * 纯 HTTP 撞上 WAF 挑战时，用真浏览器兜底采集。
-   * 只对公开店铺连接器生效；不配则维持"遇挑战就报错"的旧行为。
-   */
-  browserFallback?: {
-    /** 持久化 Profile 目录，复用会话免得每次都过挑战。 */
-    profilePath: string;
-    /** 弹出有头浏览器（手动滑块必须为 false=有头）。默认跟随环境。 */
-    headless?: boolean;
-    /** 允许手动完成滑块/验证：撞挑战时等你在弹窗里滑过再继续。 */
-    manual?: boolean;
-    /** 手动最多等多久（毫秒），<=0 一直等。默认一直等。 */
-    manualTimeoutMs?: number;
-    /** 自动拖滑块。默认**关**——实测过不了阿里云 ESA 风控，开了只是白等。 */
-    autoSlider?: boolean;
-    /** 自动拖滑块最多试几次。默认 3。 */
-    autoSliderAttempts?: number;
-  };
 }

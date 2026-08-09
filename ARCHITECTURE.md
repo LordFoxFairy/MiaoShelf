@@ -29,9 +29,12 @@ cookie 也救不了——`acw_tc` 和 IP 绑定，推给服务器就失效。
 | `scripts/audit-site.ts` | 站点自查，29 项断言 |
 | `web/` | **商品站**前端（Vite + TS），→ shop.miaokit.cloud |
 | `portal/` | **门户**前端（Vite + TS），→ miaokit.cloud |
-| `src/lib/connectors/` | 货源连接器，被采集脚本引用 |
-| `src/` 其余 | Next.js 应用，当前形态下未使用（连接器除外） |
+| `src/lib/` | 货源连接器与加密工具，共 12 个文件，全部被采集脚本引用 |
+| `prisma/` | 数据模型（凭据加密存储用） |
 | `data/` | 运行时产物：日志、同步状态（不入库） |
+
+原先的 Next.js 应用（后台管理、商品页、登录）已整体移除——当前形态下
+线上没有服务端，那套代码没有运行环境。需要后台时另起。
 
 ## 数据流
 
