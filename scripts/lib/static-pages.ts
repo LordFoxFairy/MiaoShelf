@@ -92,7 +92,11 @@ function shell(o: ShellOptions): string {
 <meta property="og:description" content="${esc(o.description)}">
 <meta property="og:url" content="${esc(o.canonical)}">
 <meta property="og:site_name" content="miaokit">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="${ORIGIN}/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="${ORIGIN}/og.png">
 ${o.jsonLd ? `<script type="application/ld+json">${JSON.stringify(o.jsonLd)}</script>` : ""}
 <style>
 :root{--ink:#1a1d26;--soft:#4b5565;--muted:#98a2b3;--line:#e2e7ee;--brand:#3b6ef5;--live:#16a34a;--gone:#e5484d}
@@ -207,6 +211,28 @@ export function productPage(
   ${esc(p.title)}，属于 <a href="${esc(catHref)}">${esc(p.category)}</a> 分类。
   ${live ? `当前${esc(stockText(p))}，` : ""}官方渠道，自动发货。
   价格与库存每 5 分钟自动同步，页面上显示的就是当前价。
+</p>
+
+<h2>怎么买</h2>
+<p class="desc">
+  点上方按钮跳到 <a href="${esc(p.url)}" rel="noopener">链动小铺</a> 的商品页下单。
+  付款后系统自动发货，卡密或账号信息会直接显示在订单页，无需等待人工处理。
+  ${live && p.stockCount !== null ? `当前库存 ${p.stockCount} 件，售完会自动标记为售罄。` : ""}
+</p>
+
+<h2>关于价格</h2>
+<p class="desc">
+  ${p.category}类商品的价格随货源渠道浮动，本站每 5 分钟从货源同步一次，
+  所以你看到的 ${esc(price)} 就是此刻的实际售价，不会出现点进去发现涨价的情况。
+  如果显示售罄，说明货源暂时没库存，通常补货后会自动恢复显示。
+</p>
+
+<h2>常见问题</h2>
+<p class="desc">
+  <strong>发货要多久？</strong>自动发货，付款后立即可见。<br>
+  <strong>支持哪些付款方式？</strong>跳转到小铺后可选支付宝、微信等常见方式。<br>
+  <strong>有售后吗？</strong>售后由货源方处理，在小铺订单页可以联系。<br>
+  <strong>库存准吗？</strong>每 5 分钟同步一次，极端情况下可能有几分钟延迟。
 </p>
 ${relatedList}`,
   });

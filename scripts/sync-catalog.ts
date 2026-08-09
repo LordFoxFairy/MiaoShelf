@@ -380,7 +380,11 @@ function prerender(
 <meta property="og:description" content="${e(description)}">
 <meta property="og:url" content="${ORIGIN}/">
 <meta property="og:site_name" content="miaokit">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="${ORIGIN}/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="${ORIGIN}/og.png">
 <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`;
 
   // 正文——放在 #app 里，前端启动后会覆盖它
