@@ -34,10 +34,10 @@
     </style>
   </head>
   <body>
-    <div id="app"></div>
-    <!-- 给爬虫的正文：JS 渲染前 body 里只有一个空 div，
-         规则会判定「疑似空页面」而拦住收录。内容与页面实际展示一致。 -->
-    <noscript>
+    <!-- 首屏内容直接放在 #app 里，不用 <noscript>——
+         降级内容不算正式内容，H1 藏在里面等于没有 H1。
+         前端启动后会用 innerHTML 覆盖，对真人不会重复显示。 -->
+    <div id="app">
       <h1>miaokit — ChatGPT Plus、Claude、Gemini 等 AI 工具与数字权益</h1>
       <p>
         miaokit 是一个 AI 工具账号与数字权益的目录站。这里能买到 ChatGPT Plus
@@ -61,7 +61,7 @@
         需要 AI 工具订阅但不方便自行开通的用户、需要批量采购数字权益的团队，
         以及想用更低成本试用各家模型的开发者。
       </p>
-    </noscript>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

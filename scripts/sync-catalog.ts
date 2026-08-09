@@ -287,23 +287,26 @@ async function main() {
  * 门户目录不存在（比如别人 clone 了只跑采集）就跳过，不该让同步失败。
  */
 /**
- * 把商品预渲染进 HTML。
+ * 首页预渲染。
  *
- * 为什么必须做：前端是运行时 fetch 数据的，爬虫拿到的 HTML 只有
- * `<div id="app"></div>`（实测 1004 字节，商品关键词 0 个）。
- * 搜索引擎收录的就是这个空壳——搜「ChatGPT Plus 代充」永远找不到。
+ * 两个关键点（2026-08-09 复测结论）：
  *
- * 做法是往 body 里塞一段静态商品清单 + JSON-LD 结构化数据。
- * 前端启动后会用 innerHTML 覆盖 #app，所以这段内容对真人不可见，
- * 但爬虫在不执行 JS 时能读到——不是欺骗，内容和页面实际展示的一致。
+ * 1. 内容必须放在**正常 DOM** 里，不能塞进 `<noscript>`。
+ *    降级内容不算正式内容——H1 藏在 noscript 里等于没有 H1。
+ *    前端启动后会用 innerHTML 覆盖 #app，所以对真人不会重复显示。
+ *
+ * 2. head 里的 title / description / canonical / og 也要一起补。
+ *    原来 title 是「商品目录」4 个字，既没品牌词也没品类词。
  */
 function prerender(
   htmlPath: string,
   items: Array<{
+    externalId: string;
     title: string;
     price: string | null;
     url: string;
     category: string;
+    stockCount: number | null;
     availabilityHint: string;
   }>,
   shopName: string | null,
@@ -312,60 +315,111 @@ function prerender(
     require("node:fs") as typeof import("node:fs");
   if (!existsSync(htmlPath)) return;
 
-  const esc = (t: unknown) =>
+  const e = (t: unknown) =>
     String(t ?? "")
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
 
+  const ORIGIN = "https://shop.miaokit.cloud";
   const live = items.filter((i) => i.availabilityHint !== "OUT_OF_STOCK");
-  // 太多会把 HTML 撑得很大，取有代表性的一批
-  const listed = live.slice(0, 60);
-
-  const list = listed
-    .map(
-      (i) =>
-        `<li><a href="${esc(i.url)}">${esc(i.title)}</a> — ${esc(i.category)} ¥${esc(i.price)}</li>`,
-    )
-    .join("");
-
-  // JSON-LD：搜索结果里能显示价格区间等富媒体信息
   const prices = live
     .map((i) => Number(i.price))
     .filter((n) => Number.isFinite(n) && n > 0);
-  const ld = {
+  const min = prices.length ? Math.min(...prices) : 0;
+
+  // 分类聚合，首页要有指向分类页的内链——爬虫靠链接爬行
+  const byCat = new Map<string, number>();
+  for (const i of items) {
+    const n = i.category?.trim() || "其他";
+    byCat.set(n, (byCat.get(n) ?? 0) + 1);
+  }
+  const cats = [...byCat.entries()].sort((a, b) => b[1] - a[1]);
+
+  const title =
+    `AI 工具与数字权益商品目录 — ChatGPT Plus、Claude、Gemini | ${shopName ?? "miaokit"}`;
+  const description =
+    `共 ${live.length} 件在售${min ? `，最低 ¥${min.toFixed(2)}` : ""}。` +
+    `提供 ChatGPT Plus、Claude、Gemini、GROK 等 AI 工具账号，` +
+    `以及视频会员、网盘、生活服务等数字权益。官方渠道直充与成品号，` +
+    `自动发货，价格与库存每 5 分钟自动同步。`;
+
+  const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "ItemList",
-    name: `${shopName ?? "miaokit"} 商品目录`,
-    numberOfItems: live.length,
-    itemListElement: listed.slice(0, 20).map((i, n) => ({
-      "@type": "ListItem",
-      position: n + 1,
-      item: {
-        "@type": "Product",
-        name: i.title,
-        category: i.category,
-        offers: {
-          "@type": "Offer",
-          price: i.price,
-          priceCurrency: "CNY",
-          availability: "https://schema.org/InStock",
+    "@type": "CollectionPage",
+    name: title,
+    description,
+    url: `${ORIGIN}/`,
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: live.length,
+      itemListElement: live.slice(0, 20).map((i, n) => ({
+        "@type": "ListItem",
+        position: n + 1,
+        url: `${ORIGIN}/p/${i.externalId}/`,
+        item: {
+          "@type": "Product",
+          name: i.title,
+          category: i.category,
+          offers: {
+            "@type": "Offer",
+            price: i.price ?? "0",
+            priceCurrency: "CNY",
+            availability: "https://schema.org/InStock",
+          },
         },
-      },
-    })),
+      })),
+    },
   };
 
-  const seo = `<noscript><div>
-<h1>${esc(shopName ?? "miaokit")} — ChatGPT Plus、Claude、Gemini 等 AI 工具与数字权益</h1>
-<p>共 ${live.length} 件在售${prices.length ? `，最低 ¥${Math.min(...prices).toFixed(2)}` : ""}。价格库存每 5 分钟自动同步。</p>
-<ul>${list}</ul>
-</div></noscript>
-<script type="application/ld+json">${JSON.stringify(ld)}</script>`;
+  // head 元数据
+  const head = `<link rel="canonical" href="${ORIGIN}/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="${e(title)}">
+<meta property="og:description" content="${e(description)}">
+<meta property="og:url" content="${ORIGIN}/">
+<meta property="og:site_name" content="miaokit">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`;
 
-  const html = readFileSync(htmlPath, "utf8");
-  if (html.includes("application/ld+json")) return; // 已注入过
-  writeFileSync(htmlPath, html.replace("</body>", `${seo}\n</body>`), "utf8");
+  // 正文——放在 #app 里，前端启动后会覆盖它
+  const body = `<div class="ssr">
+<h1>AI 工具与数字权益商品目录</h1>
+<p>共 ${live.length} 件在售${min ? `，最低 ¥${min.toFixed(2)}` : ""}。提供 ChatGPT Plus 会员、Claude、Gemini、GROK 等
+主流 AI 工具的账号与充值，也有视频会员、网盘会员、生活服务券等数字权益。
+所有商品走官方渠道直充或成品号交付，下单后自动发货。价格和库存每 5 分钟从货源自动同步，
+页面上看到的就是当前价。</p>
+<h2>商品分类</h2>
+<ul>${cats
+    .map(
+      ([name, n], i) =>
+        `<li><a href="/c/${catSlug(name, i)}/">${e(name)}</a>（${n} 件）</li>`,
+    )
+    .join("")}</ul>
+<h2>部分在售商品</h2>
+<ul>${live
+    .slice(0, 40)
+    .map(
+      (i) =>
+        `<li><a href="/p/${e(i.externalId)}/">${e(i.title)}</a> — ${e(i.category)} ¥${e(i.price)}</li>`,
+    )
+    .join("")}</ul>
+</div>`;
+
+  let html = readFileSync(htmlPath, "utf8");
+  if (html.includes('rel="canonical"')) return; // 已注入过
+
+  html = html
+    .replace(/<title>[^<]*<\/title>/, `<title>${e(title)}</title>`)
+    .replace(
+      /<meta name="description" content="[^"]*"\s*\/?>/,
+      `<meta name="description" content="${e(description)}">`,
+    )
+    .replace("</head>", `${head}\n</head>`)
+    .replace('<div id="app"></div>', `<div id="app">${body}</div>`);
+
+  writeFileSync(htmlPath, html, "utf8");
 }
 
 /**
