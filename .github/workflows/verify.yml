@@ -1,0 +1,44 @@
+name: 代码检查
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            web/pnpm-lock.yaml
+            portal/pnpm-lock.yaml
+
+      - name: 安装根目录依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 安装商品站依赖
+        run: pnpm --dir web install --frozen-lockfile
+
+      - name: 安装门户依赖
+        run: pnpm --dir portal install --frozen-lockfile
+
+      - name: 类型检查
+        run: pnpm typecheck
+
+      - name: 核心测试
+        run: pnpm test
+
+      - name: 构建两个站点
+        run: pnpm build

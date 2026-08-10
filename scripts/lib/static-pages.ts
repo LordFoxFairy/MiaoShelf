@@ -32,6 +32,16 @@ export function esc(text: unknown): string {
     .replace(/"/g, "&quot;");
 }
 
+/** JSON 放进 script 标签前要转义 HTML 控制字符，避免 `</script>` 提前闭合。 */
+export function jsonForHtml(value: object): string {
+  return JSON.stringify(value)
+    .replace(/&/g, "\\u0026")
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
 /** 分类名转 URL 片段——中文分类名不能直接进路径。 */
 export function catSlug(name: string, index: number): string {
   const ascii = name
@@ -97,7 +107,7 @@ function shell(o: ShellOptions): string {
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="${ORIGIN}/og.png">
-${o.jsonLd ? `<script type="application/ld+json">${JSON.stringify(o.jsonLd)}</script>` : ""}
+${o.jsonLd ? `<script type="application/ld+json">${jsonForHtml(o.jsonLd)}</script>` : ""}
 <style>
 :root{--ink:#1a1d26;--soft:#4b5565;--muted:#98a2b3;--line:#e2e7ee;--brand:#3b6ef5;--live:#16a34a;--gone:#e5484d}
 *{box-sizing:border-box}

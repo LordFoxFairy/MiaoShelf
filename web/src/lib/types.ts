@@ -1,11 +1,11 @@
 /**
  * 商品数据契约。
  *
- * 这份结构由本机的 `pnpm build:static` 生成并推送到 /products.json，
+ * 这份结构由本机的 `pnpm sync` 生成并推送到 /products.json，
  * 前端在运行时 fetch 它。所以**前端只部署一次**，之后每次同步只覆盖这一个
  * JSON 文件即可，不用重新构建整站。
  *
- * 采集端（scripts/build-static.ts）写入时必须保持这里的字段名一致。
+ * 采集端（scripts/sync-catalog.ts）写入时必须保持这里的字段名一致。
  */
 
 export interface Product {

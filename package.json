@@ -5,16 +5,15 @@
   "description": "商品聚合、同步与展示管理平台",
   "scripts": {
     "typecheck": "tsc --noEmit --project tsconfig.worker.json",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy",
-    "db:studio": "prisma studio",
+    "test": "tsx --test tests/*.test.ts",
+    "build:web": "pnpm --dir web build",
+    "build:portal": "pnpm --dir portal build",
+    "build": "pnpm build:web && pnpm build:portal",
     "sync": "tsx --env-file-if-exists=.env --tsconfig tsconfig.worker.json scripts/sync-catalog.ts",
     "schedule": "bash scripts/schedule.sh",
     "check-site": "tsx --tsconfig tsconfig.worker.json scripts/audit-site.ts"
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0",
     "decimal.js": "^10.4.3",
     "socks-proxy-agent": "^10.1.0",
     "undici": "^8.10.0"
@@ -22,7 +21,6 @@
   "devDependencies": {
     "@types/node": "^20",
     "playwright": "^1.62.1",
-    "prisma": "^5.22.0",
     "tsx": "^4.16.2",
     "typescript": "^5"
   },

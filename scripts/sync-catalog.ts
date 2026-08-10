@@ -19,11 +19,17 @@ import { dirname } from "node:path";
 import { LdxpShopConnector } from "@/lib/connectors/ldxp-shop/connector";
 import {
   catSlug,
+  jsonForHtml,
   productPage,
   categoryPage,
   sitemap,
   type PageProduct,
 } from "./lib/static-pages";
+import {
+  isSuspiciousCatalogDrop,
+  readCatalogItemCount,
+} from "./lib/catalog-safety";
+import { imageFileStem, pruneOrphanImages } from "./lib/image-cache";
 import type { NormalizedGoods } from "@/lib/connectors/types";
 
 const SHOP_URL = process.env.SHOP_URL ?? "https://pay.ldxp.cn/shop/miaoli";
@@ -114,7 +120,7 @@ async function localizeImages(
     if (!item.imageUrl) continue;
     // 用商品 ID 命名，稳定且不会因为源地址变化而重复下载
     const ext = (item.imageUrl.match(/\.(png|jpe?g|webp|gif)(?:\?|$)/i)?.[1] ?? "jpg").toLowerCase();
-    const name = `${item.externalId}.${ext}`;
+    const name = `${imageFileStem(item.externalId)}.${ext}`;
     const path = `${IMG_DIR}/${name}`;
 
     // 转过 WebP 的扩展名变了，两个都要认，否则每次同步都重下
@@ -181,24 +187,34 @@ async function main() {
   if (!items.length) {
     // 空结果多半是被 WAF 拦了。这时候写文件会把线上好数据覆盖成空站，
     // 所以宁可失败退出，让线上保持上一次的好数据。
-    console.error("✗ 一个商品都没采到，不写文件（避免把线上覆盖成空）。");
-    process.exit(1);
+    throw new Error("一个商品都没采到，不写文件（避免把线上覆盖成空）");
+  }
+
+  const previousItemCount = readCatalogItemCount(OUT_FILE);
+  if (
+    !process.argv.includes("--allow-large-drop") &&
+    isSuspiciousCatalogDrop(items.length, previousItemCount)
+  ) {
+    throw new Error(
+      `商品数量从 ${previousItemCount} 降到 ${items.length}，疑似数据不完整；` +
+        "确认是正常下架后用 --allow-large-drop 重跑",
+    );
   }
 
   // 只保留前端要用的字段：JSON 每次同步都要传，不带无用数据。
   // 尤其 description 含大段 HTML，218 件能占好几百 KB。
   const entries = items.map((item) => ({
-      externalId: item.externalId,
-      title: item.title,
-      imageUrl: item.imageUrl ?? null,
-      price: item.price ?? null,
-      stockCount: item.stockCount ?? null,
-      availabilityHint: item.availabilityHint,
-      url: item.url,
-      category: categoryOf(item),
-      // 小铺自带的一级大类：card=卡密、equity=权益。
-      // 前端顶部用它切换，不要自己再造一套分类。
-      goodsType: item.goodsType,
+    externalId: item.externalId,
+    title: item.title?.trim() || `商品 ${item.externalId}`,
+    imageUrl: item.imageUrl ?? null,
+    price: item.price?.toString() ?? null,
+    stockCount: item.stockCount ?? null,
+    availabilityHint: item.availabilityHint ?? "UNKNOWN",
+    url: item.url ?? SHOP_URL,
+    category: categoryOf(item),
+    // 小铺自带的一级大类：card=卡密、equity=权益。
+    // 前端顶部用它切换，不要自己再造一套分类。
+    goodsType: item.goodsType ?? "other",
   }));
 
   // 把商品图抓到本地——权益类的图在 www.ldxp.cn，那个域对浏览器返回 403
@@ -216,6 +232,22 @@ async function main() {
 
   mkdirSync(dirname(OUT_FILE), { recursive: true });
   writeFileSync(OUT_FILE, JSON.stringify(catalog), "utf8");
+
+  // 缓存清理不属于主链路：即使文件被占用，也不能阻断数据同步和发布。
+  try {
+    const removedImages = pruneOrphanImages(
+      IMG_DIR,
+      entries.map((entry) => entry.externalId),
+    );
+    if (removedImages > 0) {
+      console.log(`  图片：清理 ${removedImages} 个过期文件`);
+    }
+  } catch (error) {
+    console.warn(
+      "  图片：过期文件清理失败，已跳过：",
+      error instanceof Error ? error.message : String(error),
+    );
+  }
 
   const kb = Math.round(JSON.stringify(catalog).length / 1024);
   const sold = catalog.items.filter(
@@ -385,7 +417,7 @@ function prerender(
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="${ORIGIN}/og.png">
-<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`;
+<script type="application/ld+json">${jsonForHtml(jsonLd)}</script>`;
 
   // 正文——放在 #app 里，前端启动后会覆盖它
   const body = `<div class="ssr">

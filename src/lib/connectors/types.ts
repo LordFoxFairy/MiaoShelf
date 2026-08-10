@@ -1,6 +1,5 @@
 import type Decimal from "decimal.js";
 import type { Availability, SourceStatus } from "@/lib/enums";
-import type { FailureKind } from "@/lib/freshness";
 
 /**
  * 货源 Connector 的通用契约。
@@ -14,8 +13,20 @@ import type { FailureKind } from "@/lib/freshness";
  * 换句话说：这个文件里出现任何 "ldxp" 字样都是设计事故。
  */
 
-/** 平台标识，与 Prisma SourceProvider 枚举对应。 */
+/** 平台标识。 */
 export type ProviderId = "LDXP_MERCHANT" | "LDXP_SHOP" | "MOCK";
+
+/** 连接器错误分类，供重试、限流和状态提示使用。 */
+export type FailureKind =
+  | "NETWORK"
+  | "TIMEOUT"
+  | "AUTH"
+  | "FORBIDDEN"
+  | "RATE_LIMIT"
+  | "SERVER"
+  | "SCHEMA"
+  | "CAPTCHA"
+  | "UNKNOWN";
 
 /** 归一化后的货源商品。各平台的原始结构都要映射成这个形状。 */
 export interface NormalizedGoods {
@@ -135,29 +146,6 @@ export interface SourceConnector {
   /** 可选：完整货源列表，用于定时全量同步。 */
   listAll?(criteria: Omit<SearchCriteria, "keywords">): Promise<NormalizedPage<NormalizedGoods>>;
 }
-
-/**
- * 写操作能力：可选实现，且必须在 ENABLE_LDXP_WRITE 之后（spec §9.4）。
- * 第一版所有平台都不启用，接口先留着。
- */
-export interface WritableSourceConnector extends SourceConnector {
-  updateGoods(externalId: string, patch: Record<string, unknown>): Promise<void>;
-  updateGoodsStatus(externalId: string, active: boolean): Promise<void>;
-}
-
-export function isWritable(
-  connector: SourceConnector,
-): connector is WritableSourceConnector {
-  return (
-    typeof (connector as WritableSourceConnector).updateGoods === "function"
-  );
-}
-
-/** 工厂：由注册表按 provider 分发。 */
-export type ConnectorFactory = (
-  credentials: ConnectorCredentials,
-  options?: ConnectorRuntimeOptions,
-) => SourceConnector;
 
 export interface ConnectorRuntimeOptions {
   timeoutMs?: number;

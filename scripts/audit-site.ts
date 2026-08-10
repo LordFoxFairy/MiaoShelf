@@ -6,8 +6,8 @@
  * 「顶部78 vs 侧栏52」「选了 Claude 但库存段还显示整个大类的数字」）。
  * 靠肉眼看截图发现不了全部组合，所以固化成脚本。
  *
- *   pnpm audit                                   查线上
- *   AUDIT_URL=http://localhost:4173 pnpm audit   查本地
+ *   pnpm check-site                                      查线上
+ *   AUDIT_URL=http://localhost:4173 pnpm check-site      查本地
  */
 import { chromium, devices, type Page } from "playwright";
 

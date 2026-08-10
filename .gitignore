@@ -2,11 +2,9 @@ node_modules/
 .pnp
 .pnp.js
 
-# builds
+# build outputs
 dist/
 build/
-.next/
-out/
 *.tsbuildinfo
 
 # env & secrets — never commit
@@ -14,8 +12,7 @@ out/
 .env.*
 !.env.example
 
-# Playwright browser profiles hold real login sessions
-browser-profiles/
+# runtime state and browser test output
 /data/
 playwright-report/
 test-results/
@@ -26,16 +23,11 @@ test-results/
 SERVER.local.md
 .secrets/
 
-# SQLite 数据库 —— 含管理员密码哈希与加密后的货源凭据，绝不能提交
+# 保留对历史本地数据库的保护，避免旧数据被误提交
 *.db
 *.db-journal
 *.db-wal
 *.db-shm
-prisma/*.db
-
-# database dumps & backups
-*.sql.gz
-backups/
 
 # logs
 *.log
@@ -50,9 +42,6 @@ yarn-error.log*
 .idea/*
 !.idea/.gitignore
 
-# prisma generated client
-packages/db/generated/
-
 # 采集产物：商品图和数据由 pnpm sync 生成，不进版本库
 web/public/img/
 web/public/products.json
@@ -63,4 +52,3 @@ undefined/
 
 # 门户构建产物
 portal/dist/
-portal/node_modules/
